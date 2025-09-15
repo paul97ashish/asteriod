@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Blaster - Enhanced</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #0c0c0c, #1a1a2e, #16213e);
+            color: white;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .game-header {
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .game-header h1 {
+            grid-column: 1 / -1;
+            margin: 0;
+            font-size: 2.2em;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #00ffff;
+        }
+
+        .score {
+            font-size: 1.1em;
+            margin: 5px 0;
+            color: #ffff00;
+        }
+
+        .level-info {
+            color: #00ff00;
+            font-size: 1.1em;
+        }
+
+        .upgrade-info {
+            color: #ff69b4;
+            font-size: 0.9em;
+        }
+
+        #gameCanvas {
+            border: 2px solid #00ffff;
+            background: #000;
+            border-radius: 8px;
+            box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.1);
+        }
+
+        .controls {
+            margin-top: 15px;
+            font-size: 0.8em;
+            color: #ccc;
+            line-height: 1.4;
+        }
+
+        .start-btn, .restart-btn {
+            background: linear-gradient(45deg, #00ffff, #0080ff);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .start-btn:hover, .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+        }
+
+        .game-over {
+            color: #ff4444;
+            font-size: 1.5em;
+            margin: 15px 0;
+        }
+
+        .level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 255, 0, 0.9);
+            color: #000;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            z-index: 1000;
+            animation: levelUpPulse 2s ease-out;
+        }
+
+        @keyframes levelUpPulse {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .upgrade-notification {
+            color: #ff69b4;
+            font-size: 0.9em;
+            margin-top: 5px;
+            text-shadow: 0 0 5px #ff69b4;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+    
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🚀 ASTEROID BLASTER ENHANCED</h1>
+            
+            <div class="stat-box">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="score">Lives: <span id="lives">3</span></div>
+            </div>
+            
+            <div class="stat-box">
+                <div class="level-info">Level: <span id="level">1</span></div>
+                <div class="level-info">Progress: <span id="progress">0</span>/100</div>
+            </div>
+            
+            <div class="stat-box">
+                <div class="upgrade-info">Ship: <span id="shipType">Basic</span></div>
+                <div class="upgrade-info">Weapon: <span id="weaponType">Single</span></div>
+                <div class="upgrade-info">Speed: <span id="speedLevel">1</span></div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="700" height="450"></canvas>
+        
+        <div class="controls">
+            WASD or Arrow Keys to move • SPACE to shoot<br>
+            🎯 Destroy asteroids to gain XP and unlock upgrades!<br>
+            💎 Collect power-ups for temporary boosts<br>
+            🔴 Weapon • 🩷 Health • 🔵 Fire Rate
+        </div>
+        
+        <button class="start-btn" id="startBtn" onclick="startGame()">START GAME</button>
+        
+        <div class="game-over hidden" id="gameOverDiv">
+            <div>GAME OVER</div>
+            <div id="finalStats"></div>
+            <button class="restart-btn" onclick="startGame()">PLAY AGAIN</button>
+        </div>
+        
+        <div class="upgrade-notification hidden" id="upgradeNotification"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // UI Elements
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const levelEl = document.getElementById('level');
+        const progressEl = document.getElementById('progress');
+        const shipTypeEl = document.getElementById('shipType');
+        const weaponTypeEl = document.getElementById('weaponType');
+        const speedLevelEl = document.getElementById('speedLevel');
+        const startBtn = document.getElementById('startBtn');
+        const gameOverDiv = document.getElementById('gameOverDiv');
+        const finalStatsEl = document.getElementById('finalStats');
+        const upgradeNotificationEl = document.getElementById('upgradeNotification');
+
+        let gameState = {
+            running: false,
+            score: 0,
+            lives: 3,
+            level: 1,
+            xp: 0,
+            xpToNext: 100,
+            player: { 
+                x: 350, 
+                y: 400, 
+                size: 15, 
+                speed: 5,
+                shipType: 'basic',
+                weaponLevel: 1,
+                speedLevel: 1,
+                fireRate: 120
+            },
+            bullets: [],
+            asteroids: [],
+            powerUps: [],
+            keys: {},
+            spacePressed: false,
+            lastShot: 0
+        };
+
+        // Ship types and their properties
+        const shipTypes = {
+            basic: { name: 'Basic', color: '#00ffff', size: 15 },
+            fighter: { name: 'Fighter', color: '#ff6b6b', size: 18 },
+            destroyer: { name: 'Destroyer', color: '#4ecdc4', size: 22 },
+            battleship: { name: 'Battleship', color: '#ffd93d', size: 25 }
+        };
+
+        // Weapon types
+        const weaponTypes = {
+            1: { name: 'Single', bullets: 1, spread: 0, fireRate: 120 },
+            2: { name: 'Double', bullets: 2, spread: 15, fireRate: 100 },
+            3: { name: 'Triple', bullets: 3, spread: 25, fireRate: 90 },
+            4: { name: 'Spread', bullets: 5, spread: 40, fireRate: 80 }
+        };
+
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.style.position = 'absolute';
+                star.style.width = '2px';
+                star.style.height = '2px';
+                star.style.background = '#fff';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animation = `twinkle ${Math.random() * 3 + 1}s infinite`;
+                starsContainer.appendChild(star);
+            }
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes twinkle {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        function spawnAsteroid() {
+            const baseSize = 20 + Math.random() * 30;
+            const levelMultiplier = 1 + (gameState.level - 1) * 0.1;
+            const size = baseSize * levelMultiplier;
+            const baseSpeed = 1 + Math.random() * 2;
+            const speed = baseSpeed * (1 + gameState.level * 0.05);
+            
+            const asteroid = {
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                size: size,
+                speed: speed,
+                rotation: 0,
+                rotSpeed: (Math.random() - 0.5) * 0.2,
+                hp: Math.floor(size / 30) + 1
+            };
+            gameState.asteroids.push(asteroid);
+        }
+
+        function spawnPowerUp(x, y) {
+            if (Math.random() < 0.3) { // 30% chance
+                const types = ['speed', 'weapon', 'health', 'shield'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                gameState.powerUps.push({
+                    x: x,
+                    y: y,
+                    type: type,
+                    size: 12,
+                    rotation: 0
+                });
+            }
+        }
+
+        function drawPlayer() {
+            const ship = shipTypes[gameState.player.shipType];
+            const size = ship.size;
+            
+            ctx.fillStyle = ship.color;
+            ctx.strokeStyle = ship.color;
+            ctx.lineWidth = 2;
+            
+            // Draw ship based on type
+            ctx.beginPath();
+            if (gameState.player.shipType === 'basic') {
+                ctx.moveTo(gameState.player.x, gameState.player.y - size);
+                ctx.lineTo(gameState.player.x - size, gameState.player.y + size);
+                ctx.lineTo(gameState.player.x, gameState.player.y + size/2);
+                ctx.lineTo(gameState.player.x + size, gameState.player.y + size);
+            } else if (gameState.player.shipType === 'fighter') {
+                ctx.moveTo(gameState.player.x, gameState.player.y - size);
+                ctx.lineTo(gameState.player.x - size/2, gameState.player.y);
+                ctx.lineTo(gameState.player.x - size, gameState.player.y + size);
+                ctx.lineTo(gameState.player.x, gameState.player.y + size/2);
+                ctx.lineTo(gameState.player.x + size, gameState.player.y + size);
+                ctx.lineTo(gameState.player.x + size/2, gameState.player.y);
+            } else {
+                // Advanced ships - more complex design
+                ctx.rect(gameState.player.x - size/2, gameState.player.y - size, size, size * 2);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Add glow effect
+            ctx.shadowColor = ship.color;
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawBullet(bullet) {
+            ctx.fillStyle = bullet.color || '#ffff00';
+            ctx.shadowColor = bullet.color || '#ffff00';
+            ctx.shadowBlur = 5;
+            ctx.fillRect(bullet.x - 2, bullet.y - 6, 4, 12);
+            ctx.shadowBlur = 0;
+        }
+
+        function drawAsteroid(asteroid) {
+            ctx.save();
+            ctx.translate(asteroid.x, asteroid.y);
+            ctx.rotate(asteroid.rotation);
+            
+            // Color based on HP
+            const hpRatio = asteroid.hp / Math.floor(asteroid.size / 30 + 1);
+            const red = Math.floor(255 * (1 - hpRatio));
+            const green = Math.floor(128 * hpRatio);
+            ctx.fillStyle = `rgb(${128 + red}, ${green}, ${green})`;
+            ctx.strokeStyle = '#aaa';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            const points = 8;
+            for (let i = 0; i < points; i++) {
+                const angle = (i / points) * Math.PI * 2;
+                const radius = asteroid.size + Math.sin(angle * 3) * (asteroid.size * 0.2);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawPowerUp(powerUp) {
+            const colors = {
+                speed: '#00ff00',
+                weapon: '#ff0000', 
+                health: '#ff69b4',
+                shield: '#0080ff'
+            };
+            
+            ctx.save();
+            ctx.translate(powerUp.x, powerUp.y);
+            ctx.rotate(powerUp.rotation);
+            
+            ctx.fillStyle = colors[powerUp.type];
+            ctx.shadowColor = colors[powerUp.type];
+            ctx.shadowBlur = 8;
+            
+            // Draw diamond shape
+            ctx.beginPath();
+            ctx.moveTo(0, -powerUp.size);
+            ctx.lineTo(powerUp.size, 0);
+            ctx.lineTo(0, powerUp.size);
+            ctx.lineTo(-powerUp.size, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        function updatePlayer() {
+            if (gameState.keys['a'] || gameState.keys['A'] || gameState.keys['ArrowLeft']) {
+                gameState.player.x = Math.max(gameState.player.size, gameState.player.x - gameState.player.speed);
+            }
+            if (gameState.keys['d'] || gameState.keys['D'] || gameState.keys['ArrowRight']) {
+                gameState.player.x = Math.min(canvas.width - gameState.player.size, gameState.player.x + gameState.player.speed);
+            }
+            if (gameState.keys['w'] || gameState.keys['W'] || gameState.keys['ArrowUp']) {
+                gameState.player.y = Math.max(gameState.player.size, gameState.player.y - gameState.player.speed);
+            }
+            if (gameState.keys['s'] || gameState.keys['S'] || gameState.keys['ArrowDown']) {
+                gameState.player.y = Math.min(canvas.height - gameState.player.size, gameState.player.y + gameState.player.speed);
+            }
+        }
+
+        function updateBullets() {
+            for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+                const bullet = gameState.bullets[i];
+                bullet.x += bullet.dx;
+                bullet.y += bullet.dy;
+                
+                if (bullet.y < 0 || bullet.x < 0 || bullet.x > canvas.width) {
+                    gameState.bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function updateAsteroids() {
+            for (let i = gameState.asteroids.length - 1; i >= 0; i--) {
+                const asteroid = gameState.asteroids[i];
+                asteroid.y += asteroid.speed;
+                asteroid.rotation += asteroid.rotSpeed;
+                
+                if (asteroid.y > canvas.height + asteroid.size) {
+                    gameState.asteroids.splice(i, 1);
+                }
+            }
+        }
+
+        function updatePowerUps() {
+            for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+                const powerUp = gameState.powerUps[i];
+                powerUp.y += 2;
+                powerUp.rotation += 0.1;
+                
+                if (powerUp.y > canvas.height) {
+                    gameState.powerUps.splice(i, 1);
+                }
+            }
+        }
+
+        function checkCollisions() {
+            // Bullet-asteroid collisions
+            for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+                const bullet = gameState.bullets[i];
+                for (let j = gameState.asteroids.length - 1; j >= 0; j--) {
+                    const asteroid = gameState.asteroids[j];
+                    const dx = bullet.x - asteroid.x;
+                    const dy = bullet.y - asteroid.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < asteroid.size) {
+                        gameState.bullets.splice(i, 1);
+                        asteroid.hp--;
+                        
+                        if (asteroid.hp <= 0) {
+                            const points = Math.floor(asteroid.size / 5);
+                            gameState.score += points;
+                            gameState.xp += points;
+                            scoreEl.textContent = gameState.score;
+                            
+                            spawnPowerUp(asteroid.x, asteroid.y);
+                            gameState.asteroids.splice(j, 1);
+                            
+                            // Check level up
+                            if (gameState.xp >= gameState.xpToNext) {
+                                levelUp();
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Player-asteroid collisions
+            for (let i = gameState.asteroids.length - 1; i >= 0; i--) {
+                const asteroid = gameState.asteroids[i];
+                const dx = gameState.player.x - asteroid.x;
+                const dy = gameState.player.y - asteroid.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < asteroid.size + gameState.player.size) {
+                    gameState.asteroids.splice(i, 1);
+                    gameState.lives--;
+                    livesEl.textContent = gameState.lives;
+                    
+                    if (gameState.lives <= 0) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+            
+            // Player-powerup collisions
+            for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+                const powerUp = gameState.powerUps[i];
+                const dx = gameState.player.x - powerUp.x;
+                const dy = gameState.player.y - powerUp.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < powerUp.size + gameState.player.size) {
+                    collectPowerUp(powerUp.type);
+                    gameState.powerUps.splice(i, 1);
+                }
+            }
+        }
+
+        function collectPowerUp(type) {
+            let message = '';
+            switch(type) {
+                case 'speed':
+                    gameState.player.speed = Math.min(10, gameState.player.speed + 1);
+                    message = 'Speed Boost!';
+                    break;
+                case 'weapon':
+                    if (gameState.player.weaponLevel < 4) {
+                        gameState.player.weaponLevel++;
+                        updateWeaponDisplay();
+                        message = 'Weapon Upgrade!';
+                    } else {
+                        gameState.score += 50;
+                        message = '+50 Points!';
+                    }
+                    break;
+                case 'health':
+                    gameState.lives = Math.min(5, gameState.lives + 1);
+                    livesEl.textContent = gameState.lives;
+                    message = 'Extra Life!';
+                    break;
+                case 'shield':
+                    gameState.player.fireRate = Math.max(50, gameState.player.fireRate - 20);
+                    message = 'Fire Rate Boost!';
+                    break;
+            }
+            
+            showUpgradeNotification(message);
+        }
+
+        function showUpgradeNotification(message) {
+            upgradeNotificationEl.textContent = message;
+            upgradeNotificationEl.classList.remove('hidden');
+            setTimeout(() => {
+                upgradeNotificationEl.classList.add('hidden');
+            }, 2000);
+        }
+
+        function levelUp() {
+            gameState.level++;
+            gameState.xp = 0;
+            gameState.xpToNext = gameState.level * 100;
+            
+            // Ship upgrades based on level
+            if (gameState.level === 5) {
+                gameState.player.shipType = 'fighter';
+            } else if (gameState.level === 10) {
+                gameState.player.shipType = 'destroyer';
+            } else if (gameState.level === 15) {
+                gameState.player.shipType = 'battleship';
+            }
+            
+            updateDisplays();
+            showLevelUpAnimation();
+        }
+
+        function showLevelUpAnimation() {
+            const levelUpEl = document.createElement('div');
+            levelUpEl.className = 'level-up';
+            levelUpEl.textContent = `LEVEL ${gameState.level}!`;
+            document.body.appendChild(levelUpEl);
+            
+            setTimeout(() => {
+                document.body.removeChild(levelUpEl);
+            }, 2000);
+        }
+
+        function updateDisplays() {
+            levelEl.textContent = gameState.level;
+            progressEl.textContent = gameState.xp;
+            shipTypeEl.textContent = shipTypes[gameState.player.shipType].name;
+            updateWeaponDisplay();
+            speedLevelEl.textContent = gameState.player.speedLevel;
+        }
+
+        function updateWeaponDisplay() {
+            weaponTypeEl.textContent = weaponTypes[gameState.player.weaponLevel].name;
+        }
+
+        function shoot() {
+            const weapon = weaponTypes[gameState.player.weaponLevel];
+            const bulletSpeed = 8;
+            
+            if (weapon.bullets === 1) {
+                gameState.bullets.push({
+                    x: gameState.player.x,
+                    y: gameState.player.y - gameState.player.size,
+                    dx: 0,
+                    dy: -bulletSpeed,
+                    color: shipTypes[gameState.player.shipType].color
+                });
+            } else {
+                // Multi-shot weapons
+                for (let i = 0; i < weapon.bullets; i++) {
+                    const angle = (i - (weapon.bullets - 1) / 2) * (weapon.spread * Math.PI / 180) / (weapon.bullets - 1);
+                    gameState.bullets.push({
+                        x: gameState.player.x,
+                        y: gameState.player.y - gameState.player.size,
+                        dx: Math.sin(angle) * bulletSpeed * 0.5,
+                        dy: -bulletSpeed * Math.cos(angle),
+                        color: shipTypes[gameState.player.shipType].color
+                    });
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (!gameState.running) return;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            updatePlayer();
+            
+            // Handle continuous shooting
+            if (gameState.spacePressed && gameState.running) {
+                const now = Date.now();
+                if (now - gameState.lastShot > gameState.player.fireRate) {
+                    shoot();
+                    gameState.lastShot = now;
+                }
+            }
+            
+            updateBullets();
+            updateAsteroids();
+            updatePowerUps();
+            checkCollisions();
+            
+            drawPlayer();
+            gameState.bullets.forEach(drawBullet);
+            gameState.asteroids.forEach(drawAsteroid);
+            gameState.powerUps.forEach(drawPowerUp);
+            
+            // Dynamic asteroid spawning
+            const spawnRate = 0.02 + gameState.level * 0.005;
+            if (Math.random() < spawnRate) {
+                spawnAsteroid();
+            }
+            
+            // Update progress bar
+            progressEl.textContent = `${gameState.xp}/${gameState.xpToNext}`;
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameState = {
+                running: true,
+                score: 0,
+                lives: 3,
+                level: 1,
+                xp: 0,
+                xpToNext: 100,
+                player: { 
+                    x: 350, 
+                    y: 400, 
+                    size: 15, 
+                    speed: 5,
+                    shipType: 'basic',
+                    weaponLevel: 1,
+                    speedLevel: 1,
+                    fireRate: 120
+                },
+                bullets: [],
+                asteroids: [],
+                powerUps: [],
+                keys: {},
+                spacePressed: false,
+                lastShot: 0
+            };
+            
+            updateDisplays();
+            scoreEl.textContent = '0';
+            livesEl.textContent = '3';
+            startBtn.classList.add('hidden');
+            gameOverDiv.classList.add('hidden');
+            
+            gameLoop();
+        }
+
+        function gameOver() {
+            gameState.running = false;
+            finalStatsEl.innerHTML = `
+                Final Level: ${gameState.level}<br>
+                Ship Type: ${shipTypes[gameState.player.shipType].name}<br>
+                Weapon Level: ${weaponTypes[gameState.player.weaponLevel].name}
+            `;
+            gameOverDiv.classList.remove('hidden');
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.key] = true;
+            
+            if (e.key === ' ') {
+                e.preventDefault();
+                gameState.spacePressed = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.key] = false;
+            
+            if (e.key === ' ') {
+                gameState.spacePressed = false;
+            }
+        });
+
+        // Initialize
+        createStars();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    </script>
+</body>
+</html>
