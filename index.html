@@ -21,6 +21,7 @@
 
         .game-container {
             display: flex; /* Use flexbox for game container */
+            flex-direction: row; /* Default for larger screens */
             text-align: center;
             background: rgba(0, 0, 0, 0.3);
             padding: 20px;
@@ -28,6 +29,8 @@
             border: 2px solid #00ffff;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
             align-items: flex-start; /* Align items to the top */
+            max-width: 95%;
+            margin: 10px;
         }
 
         .game-header {
@@ -102,6 +105,10 @@
             background: #000;
             border-radius: 8px;
             box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.1);
+            width: 100%; /* Make canvas responsive */
+            height: auto; /* Maintain aspect ratio */
+            max-width: 900px; /* Original max width */
+            max-height: 900px; /* Original max height */
         }
 
         .controls {
@@ -189,6 +196,55 @@
             text-shadow: 0 0 5px #ff69b4;
             transition: opacity 0.3s ease-in-out;
             opacity: 1;
+        }
+
+        /* Media queries for responsiveness */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .game-container {
+                flex-direction: column; /* Stack elements vertically on small screens */
+                padding: 10px;
+                margin: 5px;
+            }
+
+            .sidebar {
+                margin-left: 0;
+                margin-top: 20px;
+                width: 100%;
+                min-width: unset;
+            }
+
+            .game-header h1 {
+                font-size: 1.8em;
+            }
+
+            .stat-box {
+                flex-direction: row;
+                justify-content: space-around;
+                flex-wrap: wrap;
+            }
+
+            .controls {
+                margin-top: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-header h1 {
+                font-size: 1.5em;
+            }
+
+            .stat-box {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .score, .level-info, .upgrade-info {
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
@@ -798,7 +854,7 @@
             gameOverDiv.classList.remove('hidden');
         }
 
-        // Event listeners
+        // Event listeners for keyboard
         document.addEventListener('keydown', (e) => {
             gameState.keys[e.key] = true;
             
@@ -810,6 +866,57 @@
             
             // Removed spacebar functionality
         });
+
+        // Touch controls
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            touchEndX = e.touches[0].clientX;
+            touchEndY = e.touches[0].clientY;
+            handleTouchMove();
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // Reset touch state if needed
+            gameState.keys = {}; // Clear movement keys on touch release
+        });
+
+        function handleTouchMove() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+
+            // Determine direction based on touch swipe
+            gameState.keys = {}; // Clear previous keys
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal swipe
+                if (deltaX > 0) {
+                    gameState.keys['ArrowRight'] = true; // Move right
+                } else {
+                    gameState.keys['ArrowLeft'] = true; // Move left
+                }
+            } else {
+                // Vertical swipe
+                if (deltaY > 0) {
+                    gameState.keys['ArrowDown'] = true; // Move down
+                } else {
+                    gameState.keys['ArrowUp'] = true; // Move up
+                }
+            }
+            // For continuous movement, update start to current end
+            touchStartX = touchEndX;
+            touchStartY = touchEndY;
+        }
 
         // Initialize
         createStars();
